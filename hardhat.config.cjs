@@ -1,17 +1,28 @@
 require("@nomicfoundation/hardhat-toolbox");
+require("@openzeppelin/hardhat-upgrades");
 require("dotenv").config();
 
+/** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
     version: "0.8.19",
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
-      }
-    }
+        runs: 200,
+        details: {
+          yul: true,
+          yulDetails: {
+            stackAllocation: true,
+            optimizerSteps: "dhfoDgvulfnTUtnIf"
+          }
+        }
+      },
+      viaIR: true, // Enable IR-based compilation for better optimization
+    },
   },
-  networks: {
+
+networks: {
     // Duck Chain Mainnet
     duckchain: {
       url: "https://rpc.duckchain.io", // Primary RPC
@@ -79,45 +90,55 @@ module.exports = {
       }
     ]
   },
-
-  // Gas reporter configuration for Duck Chain
+  // Gas reporter configuration
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
-    currency: "TON", // Duck Chain uses TON as native currency
-    coinmarketcap: process.env.COINMARKETCAP_API_KEY
+    currency: "USD",
+    gasPrice: 0.1, // Duck's low gas costs
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
+    token: "Duck",
+    gasPriceApi: "https://api.duckChain.io/gas-price", // Custom for Duck if available
+  },
+  
+  // Mocha test configuration  
+  mocha: {
+    timeout: 120000, // 2 minutes for comprehensive tests
+    reporter: "spec",
+    slow: 5000,
+  },
+  
+  // Contract size limits
+  contractSizer: {
+    alphaSort: true,
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
+  },
+  
+  // Path configuration
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts",
+    deploy: "./deploy",
+    deployments: "./deployments",
+  },
+  
+  // External contract dependencies
+  external: {
+    contracts: [
+      {
+        artifacts: "node_modules/@openzeppelin/contracts",
+      },
+    ],
+  },
+  
+  // Compiler warnings suppression
+  warnings: {
+    "*": {
+      "contracts/mocks/**/*": "off",
+      "default": "error"
+    }
   }
 };
-
-// Duck Chain specific deployment configuration (no ethers here)
-const DUCK_CHAIN_CONFIG = {
-  // Gas settings optimized for Duck Chain (use string values in config)
-  gasSettings: {
-    maxFeePerGas: "20000000000", // 20 gwei in wei
-    maxPriorityFeePerGas: "2000000000", // 2 gwei in wei
-    gasLimit: 300000 // Conservative default
-  },
-  
-  // Duck Chain native token info
-  nativeToken: {
-    name: "TON",
-    symbol: "TON", 
-    decimals: 18
-  },
-  
-  // Block explorer
-  explorer: {
-    mainnet: "https://duckscan.io",
-    testnet: "https://testnet.duckscan.io"
-  },
-  
-  // Recommended deployment order for Duck Chain
-  deploymentSteps: [
-    "MockERC20", 
-    "ProtegoMasterVault",
-    "ProtegoYieldVaultCore", 
-    "ProtegoYieldVaultGoat",
-    "ProtegoMultiInvoiceNotes"
-  ]
-};
-
-module.exports.DUCK_CHAIN_CONFIG = DUCK_CHAIN_CONFIG;
